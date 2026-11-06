@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudShield - Image-Based Fraud Complaint Generator</title>
+    
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- html2pdf.js for Client-Side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-glows">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="glow glow-3"></div>
+    </div>
+
+    <!-- Language Selection Startup Modal -->
+    <div class="modal-overlay hidden" id="lang-modal" style="z-index: 3000;">
+        <div class="modal-card glass-panel" style="max-width: 420px; text-align: center; padding: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 3rem; margin-bottom: 15px; color: var(--accent-cyan); filter: drop-shadow(0 0 10px var(--accent-cyan-glow));">
+                <i class="fa-solid fa-language"></i>
+            </div>
+            <h2 style="font-family: var(--font-heading); font-size: 1.55rem; color: #ffffff; margin-bottom: 8px;">Select Language</h2>
+            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--color-text-secondary); font-weight: 500; margin-bottom: 25px; line-height: 1.4;">భాషను ఎంచుకోండి / భాష चुनें</h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px; width: 100%;">
+                <button class="btn btn-accent lang-select-btn" data-lang="en" style="padding: 12px; font-weight: 600; justify-content: center; width: 100%;">English</button>
+                <button class="btn btn-secondary lang-select-btn" data-lang="hi" style="padding: 12px; font-weight: 600; border-color: rgba(99,102,241,0.25); justify-content: center; width: 100%;">हिंदी (Hindi)</button>
+                <button class="btn btn-secondary lang-select-btn" data-lang="te" style="padding: 12px; font-weight: 600; border-color: rgba(99,102,241,0.25); justify-content: center; width: 100%;">తెలుగు (Telugu)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="header-logo">
+            <div class="logo-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="logo-text">
+                <h1>Fraud<span>Shield</span></h1>
+                <p data-i18n="logo-sub">AI Cybercrime Assistant</p>
+            </div>
+        </div>
+
+        <!-- Top Navigation Bar -->
+        <nav class="header-nav">
+            <button class="nav-tab active" data-view="view-reporter">
+                <i class="fa-solid fa-shield-halved"></i> <span data-i18n="nav-reporter">Evidence Reporter</span>
+            </button>
+            <button class="nav-tab" data-view="view-link-analyzer">
+                <i class="fa-solid fa-link-slash"></i> <span data-i18n="nav-link">Link Analyzer</span>
+            </button>
+            <button class="nav-tab" data-view="view-chatbot">
+                <i class="fa-solid fa-comments"></i> <span data-i18n="nav-chatbot">Security Assistant</span>
+            </button>
+        </nav>
+
+        <div class="header-actions">
+            <!-- Language Dropdown Trigger -->
+            <div class="lang-selector-wrapper" style="position: relative; margin-right: 8px;">
+                <button id="btn-lang-selector" class="btn btn-secondary" title="Change Language" style="gap: 6px; padding: 10px 14px; font-size: 0.85rem; height: 44px;">
+                    <i class="fa-solid fa-language" style="font-size: 1.1rem; color: var(--accent-cyan);"></i>
+                    <span id="current-lang-text">English</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: var(--color-text-muted);"></i>
+                </button>
+                <div id="lang-dropdown" class="lang-dropdown hidden">
+                    <button class="lang-opt-btn" data-lang="en">English</button>
+                    <button class="lang-opt-btn" data-lang="hi">हिंदी (Hindi)</button>
+                    <button class="lang-opt-btn" data-lang="te">తెలుగు (Telugu)</button>
+                </div>
+            </div>
+
+            <button id="btn-api-config" class="btn btn-secondary btn-icon-only" title="Configure API Key">
+                <i class="fa-solid fa-key"></i>
+                <span class="btn-text" data-i18n="btn-api-text">API Key</span>
+                <span class="api-status-badge status-missing" id="api-status-dot"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Workspace -->
+    <main class="main-content-wrapper">
+        <!-- View 1: Evidence Reporter -->
+        <div id="view-reporter" class="app-view dashboard-grid">
+            <!-- Left Column: Inputs & Image Uploader -->
+            <section class="input-panel glass-panel">
+            <div class="panel-header">
+                <h2 data-i18n="panel-details-title"><i class="fa-solid fa-file-invoice"></i> Incident Details</h2>
+                <p data-i18n="panel-details-desc">Upload fraud proof and customize your complaint</p>
+            </div>
+
+            <!-- Drag & Drop Uploader -->
+            <div class="uploader-container">
+                <div class="drop-zone" id="drop-zone">
+                    <input type="file" id="file-input" accept="image/png, image/jpeg, image/webp" hidden>
+                    
+                    <!-- Upload Prompt State -->
+                    <div class="drop-zone-prompt" id="drop-zone-prompt">
+                        <div class="upload-icon-wrapper">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <h3 data-i18n="dropzone-title">Upload Evidence Image</h3>
+                        <p data-i18n="dropzone-desc">Drag and drop screenshot of fake email, SMS, or scam page here</p>
+                        <span class="btn btn-accent btn-sm" data-i18n="dropzone-btn">Browse Files</span>
+                        <span class="file-limits" data-i18n="dropzone-limits">Supports PNG, JPG, WEBP (Max 10MB)</span>
+                    </div>
+
+                    <!-- Upload Preview State -->
+                    <div class="drop-zone-preview hidden" id="drop-zone-preview">
+                        <img src="" alt="Evidence Preview" id="preview-image">
+                        <div class="preview-overlay">
+                            <div class="preview-actions">
+                                <span class="file-name" id="preview-filename">evidence_screenshot.png</span>
+                                <button type="button" class="btn btn-danger btn-sm" id="btn-remove-image" title="Remove Image">
+                                    <i class="fa-solid fa-trash-can"></i> <span data-i18n="btn-remove">Remove</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Details Personalization Accordion -->
+            <details class="accordion-details" style="margin-top: 20px; margin-bottom: 20px;">
+                <summary class="accordion-summary">
+                    <span data-i18n="acc-title"><i class="fa-solid fa-user-pen"></i> Personalize Report (Optional)</span>
+                    <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                </summary>
+                <div class="accordion-content">
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="input-victim-name" data-i18n="lbl-victim-name">Your Name</label>
+                            <input type="text" id="input-victim-name" placeholder="John Doe" data-i18n-placeholder="placeholder-victim-name">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="input-victim-phone" data-i18n="lbl-victim-phone">Your Phone</label>
+                            <input type="text" id="input-victim-phone" placeholder="+1 (555) 019-2834" data-i18n-placeholder="placeholder-victim-phone">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="input-victim-extra" data-i18n="lbl-victim-extra">Additional Context (e.g. Account Number, Details)</label>
+                        <input type="text" id="input-victim-extra" placeholder="Chase Account Ending in 1234" data-i18n-placeholder="placeholder-victim-extra">
+                    </div>
+                </div>
+            </details>
+
+            <!-- Zero-Touch AI Analysis Guide -->
+            <div class="features-guide-card">
+                <h3 data-i18n="guide-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Zero-Touch AI Analysis</h3>
+                <p data-i18n="guide-desc">Upload a screenshot and let FraudShield handle the entire process automatically:</p>
+                <ul class="guide-steps-list">
+                    <li>
+                        <div class="step-num-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div>
+                            <strong data-i18n="guide-step1-title">Evidence Scanning</strong>
+                            <p data-i18n="guide-step1-desc">Extracts scammer email addresses, phishing links, timestamps, and spoofed logos.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="step-num-icon"><i class="fa-solid fa-code-fork"></i></div>
+                        <div>
+                            <strong data-i18n="guide-step2-title">Cybercrime Classification</strong>
+                            <p data-i18n="guide-step2-desc">Identifies the crime type (e.g., Financial Phishing, Smishing, Identity Spoofing).</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="step-num-icon"><i class="fa-solid fa-building-shield"></i></div>
+                        <div>
+                            <strong data-i18n="guide-step3-title">Target Matching</strong>
+                            <p data-i18n="guide-step3-desc">Determines the correct abuse desks, watchdogs, or portals for reporting.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Right Column: Outputs Dashboard -->
+        <section class="output-panel glass-panel">
+            
+            <!-- Empty State Layout -->
+            <div class="output-empty-state" id="output-empty-state">
+                <div class="empty-icon-wrapper">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                </div>
+                <h2 data-i18n="empty-title">Ready to Analyze</h2>
+                <p data-i18n="empty-desc">Upload a screenshot of the scam or fraud on the left panel. FraudShield will immediately classify the cybercrime, locate the reporting authority, and draft your complaint.</p>
+                <div class="features-brief">
+                    <div class="feature-item">
+                        <i class="fa-solid fa-shield-virus"></i>
+                        <span data-i18n="empty-feat1">Threat Indicator Scan</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                        <span data-i18n="empty-feat2">Polished Complaint Letter</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span data-i18n="empty-feat3">Instant Action Steps</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State Layout -->
+            <div class="output-loading-state hidden" id="output-loading-state">
+                <div class="loader-spinner">
+                    <div class="spinner-ring"></div>
+                    <i class="fa-solid fa-shield-halved loader-center-icon"></i>
+                </div>
+                <h2 data-i18n="loading-title">Analyzing Evidence</h2>
+                <p data-i18n="loading-desc">AI is scanning the image files and crafting your response...</p>
+                
+                <div class="loading-steps">
+                    <div class="loading-step current" id="step-1">
+                        <div class="step-icon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                        <span data-i18n="loading-step1">Reading visual evidence & text...</span>
+                    </div>
+                    <div class="loading-step" id="step-2">
+                        <div class="step-icon"><i class="fa-regular fa-circle"></i></div>
+                        <span data-i18n="loading-step2">Identifying cybersecurity indicators...</span>
+                    </div>
+                    <div class="loading-step" id="step-3">
+                        <div class="step-icon"><i class="fa-regular fa-circle"></i></div>
+                        <span data-i18n="loading-step3">Drafting formal complaint & checklist...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Loaded State Layout -->
+            <div class="output-loaded-state hidden" id="output-loaded-state">
+                <!-- Auto-Detection Results Status Bar -->
+                <div class="auto-detection-summary">
+                    <div class="summary-badge-wrapper">
+                        <div class="summary-badge-item">
+                            <span class="badge-label"><i class="fa-solid fa-shield-virus"></i> <span data-i18n="badge-class">Cybercrime Classification</span></span>
+                            <span class="badge-value" id="detected-category-text" data-i18n="status-analyzing">Analyzing...</span>
+                        </div>
+                        <div class="summary-badge-item">
+                            <span class="badge-label"><i class="fa-solid fa-building-shield"></i> <span data-i18n="badge-auth">Target Authority</span></span>
+                            <span class="badge-value" id="detected-recipient-text" data-i18n="status-analyzing">Analyzing...</span>
+                        </div>
+                        <div class="summary-badge-item">
+                            <span class="badge-label"><i class="fa-solid fa-envelope"></i> <span data-i18n="badge-dest">Reporting Destination</span></span>
+                            <span class="badge-value" id="detected-email-text" data-i18n="status-analyzing">Analyzing...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="output-tabs">
+                    <button class="tab-btn active" data-tab="tab-email">
+                        <i class="fa-solid fa-envelope-open-text"></i> <span data-i18n="tab-btn-email">Complaint Email</span>
+                    </button>
+                    <button class="tab-btn" data-tab="tab-threats">
+                        <i class="fa-solid fa-circle-exclamation"></i> <span data-i18n="tab-btn-threats">Threat Analysis</span>
+                    </button>
+                    <button class="tab-btn" data-tab="tab-checklist">
+                        <i class="fa-solid fa-clipboard-list"></i> <span data-i18n="tab-btn-checklist">Next Steps</span>
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tab-contents-wrapper">
+                    
+                    <!-- Tab 1: Email Generation -->
+                    <div class="tab-content active" id="tab-email">
+                        <div class="email-meta-header">
+                            <div class="form-group">
+                                <label for="email-subject" data-i18n="lbl-subject">Email Subject</label>
+                                <div class="subject-input-wrapper">
+                                    <input type="text" id="email-subject" readonly>
+                                    <button class="btn btn-secondary btn-sm" id="btn-copy-subject" title="Copy Subject">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="email-body-wrapper">
+                            <label for="email-body" data-i18n="lbl-body">Email Body (Editable)</label>
+                            <textarea id="email-body" rows="12"></textarea>
+                        </div>
+                        <div class="email-actions">
+                            <button class="btn btn-secondary" id="btn-copy-email">
+                                <i class="fa-solid fa-copy"></i> <span data-i18n="btn-copy">Copy Entire Email</span>
+                            </button>
+                            <button class="btn btn-secondary" id="btn-download-email">
+                                <i class="fa-solid fa-download"></i> <span data-i18n="btn-download">Save as Text</span>
+                            </button>
+                            <a href="#" class="btn btn-accent" id="btn-send-email" target="_blank">
+                                <i class="fa-solid fa-paper-plane"></i> <span data-i18n="btn-send">Send Email</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Threat Analysis -->
+                    <div class="tab-content" id="tab-threats">
+                        <div class="analysis-container">
+                            <div class="analysis-alert-banner">
+                                <i class="fa-solid fa-circle-nodes"></i>
+                                <div style="flex: 1;">
+                                    <h4 data-i18n="threat-banner-title">AI Analysis Report</h4>
+                                    <p data-i18n="threat-banner-desc">Key evidence elements and cybersecurity red flags extracted from the image.</p>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" id="btn-download-report" title="Download Full Report" style="display: none;">
+                                    <i class="fa-solid fa-file-arrow-down"></i> <span data-i18n="btn-save-report">Save Report</span>
+                                </button>
+                            </div>
+                            <div class="markdown-body" id="threat-analysis-content">
+                                <!-- Dynamic Markdown Content Injection -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Action Checklist -->
+                    <div class="tab-content" id="tab-checklist">
+                        <div class="checklist-header">
+                            <h3 data-i18n="checklist-title-header"><i class="fa-solid fa-shield-heart"></i> Cyber Safety Action Items</h3>
+                            <p data-i18n="checklist-subtitle-header">Complete these steps immediately to safeguard your account and digital presence.</p>
+                        </div>
+                        <div class="checklist-items" id="checklist-items-container">
+                            <!-- Dynamic Checkbox Items Injection -->
+                        </div>
+                        <div class="checklist-footer-note">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <p data-i18n="checklist-disclaimer">Disclaimer: These suggestions are based on standard security practices. Please contact your organization's IT department or bank support directly for definitive instructions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        </div>
+
+        <!-- View 2: Phishing Link Analyzer -->
+        <div id="view-link-analyzer" class="app-view dashboard-grid hidden">
+            <!-- Left Panel: Input Search Bar -->
+            <section class="input-panel glass-panel">
+                <div class="panel-header">
+                    <h2 data-i18n="link-title"><i class="fa-solid fa-link-slash"></i> Link Scanner</h2>
+                    <p data-i18n="link-desc">Verify suspicious URLs for phishing indicators and fraud campaigns</p>
+                </div>
+                
+                <div class="url-input-container" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="input-scam-url"><i class="fa-solid fa-globe"></i> <span data-i18n="lbl-scam-url">Suspicious URL / Link</span></label>
+                        <textarea id="input-scam-url" rows="3" placeholder="Paste link here (e.g., http://login-netflix-verify.net/auth)" data-i18n-placeholder="placeholder-scam-url"></textarea>
+                    </div>
+                    <button id="btn-analyze-url" class="btn btn-accent btn-large btn-glow">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> <span data-i18n="btn-run-scan">Run Threat Scan</span>
+                    </button>
+                </div>
+                
+                <div class="features-guide-card">
+                    <h3 data-i18n="link-guide-title"><i class="fa-solid fa-circle-info"></i> How URL Scanning Works</h3>
+                    <p data-i18n="link-guide-desc">The system performs a structural check on the domain and path, assessing:</p>
+                    <ul class="guide-steps-list">
+                        <li>
+                            <div class="step-num-icon"><i class="fa-solid fa-font"></i></div>
+                            <div>
+                                <strong data-i18n="link-guide-feat1-title">Typosquatting & Lookalikes</strong>
+                                <p data-i18n="link-guide-feat1-desc">Scans for character substitutions (like 'rn' for 'm') and brand names mixed with generic words.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="step-num-icon"><i class="fa-solid fa-globe"></i></div>
+                            <div>
+                                <strong data-i18n="link-guide-feat2-title">TLD Domain Risk</strong>
+                                <p data-i18n="link-guide-feat2-desc">Assesses the safety reputation of the top-level domain extensions (.xyz, .top, .info vs .com).</p>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="step-num-icon"><i class="fa-solid fa-lock"></i></div>
+                            <div>
+                                <strong data-i18n="link-guide-feat3-title">Protocol Safety</strong>
+                                <p data-i18n="link-guide-feat3-desc">Checks if the link relies on insecure HTTP protocols which lack data encryption.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results & Breakdown -->
+            <section class="output-panel glass-panel">
+                <!-- Empty State -->
+                <div class="output-empty-state" id="url-empty-state">
+                    <div class="empty-icon-wrapper">
+                        <i class="fa-solid fa-satellite-dish"></i>
+                    </div>
+                    <h2 data-i18n="url-empty-title">Threat Scan Ready</h2>
+                    <p data-i18n="url-empty-desc">Paste a suspicious link on the left panel and click "Run Threat Scan" to extract registrar details, brand spoofing scores, and risk evaluations.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div class="output-loading-state hidden" id="url-loading-state">
+                    <div class="loader-spinner">
+                        <div class="spinner-ring"></div>
+                        <i class="fa-solid fa-network-wired loader-center-icon"></i>
+                    </div>
+                    <h2 data-i18n="url-loading-title">Scanning Link</h2>
+                    <p data-i18n="url-loading-desc">Running structural audit and security classification on the domain...</p>
+                </div>
+
+                <!-- Results Loaded State -->
+                <div class="output-loaded-state hidden" id="url-loaded-state">
+                    <!-- Safety Score Header Card -->
+                    <div class="threat-meter-card">
+                        <div class="gauge-container">
+                            <div class="circular-progress" id="url-progress-circle">
+                                <span class="progress-value" id="url-score-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="threat-summary-meta">
+                            <h3 data-i18n="url-score-title">Domain Safety Score</h3>
+                            <p id="url-safety-status">CRITICAL THREAT</p>
+                            <span class="badge" id="url-risk-badge">Phishing Link</span>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Details -->
+                    <div class="analysis-container" style="max-height: 290px; overflow-y: auto; margin-bottom: 20px; padding-right: 6px;">
+                        <div class="url-meta-header" style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                            <span class="meta-label" style="font-size: 0.75rem; color: var(--color-text-secondary); text-transform: uppercase;" data-i18n="lbl-analyzed-link">Analyzed Link:</span>
+                            <code class="meta-value" id="url-display-text" style="font-family: monospace; display: block; word-break: break-all; margin-top: 4px; color: var(--accent-cyan); font-size: 0.85rem;">http://example.com</code>
+                        </div>
+
+                        <!-- Target Brand Alerts -->
+                        <div class="analysis-alert-banner" id="url-brand-banner" style="margin-bottom: 15px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <div>
+                                <h4><span data-i18n="lbl-impersonate-prefix">Target Brand Impersonated:</span> <span id="url-target-brand">Netflix</span></h4>
+                                <p data-i18n="url-impersonate-desc">This page mimics a secure portal to harvest credentials for this service.</p>
+                            </div>
+                        </div>
+
+                        <!-- Simple Explanation Card -->
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                            <h4 style="color: var(--accent-cyan); font-size: 0.9rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-family: var(--font-heading);"><span data-i18n="url-simple-expl-title"><i class="fa-solid fa-circle-info"></i> What is this link? (Simplified)</span></h4>
+                            <p id="url-simple-expl" style="font-size: 0.82rem; line-height: 1.45; color: var(--color-text-secondary); margin-bottom: 10px;">Analyzing...</p>
+                            
+                            <h4 style="color: var(--accent-indigo); font-size: 0.9rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-family: var(--font-heading);"><span data-i18n="url-edu-title"><i class="fa-solid fa-graduation-cap"></i> Link Structure Explained</span></h4>
+                            <p id="url-edu-expl" style="font-size: 0.82rem; line-height: 1.45; color: var(--color-text-secondary); margin-bottom: 0;">Analyzing...</p>
+                        </div>
+
+                        <!-- Do's & Don'ts Grid -->
+                        <div class="dos-donts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                            <div class="dos-card" style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px; border-radius: var(--radius-md);">
+                                <h4 style="color: var(--accent-success); font-size: 0.85rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-family: var(--font-heading);"><span data-i18n="url-dos-title"><i class="fa-solid fa-circle-check"></i> Actions to Take</span></h4>
+                                <ul id="url-dos-list" style="font-size: 0.78rem; padding-left: 14px; color: var(--color-text-secondary); line-height: 1.4; margin-bottom: 0;">
+                                    <!-- Dynamic DOs -->
+                                </ul>
+                            </div>
+                            <div class="donts-card" style="background: rgba(244, 63, 94, 0.04); border: 1px solid rgba(244, 63, 94, 0.2); padding: 12px; border-radius: var(--radius-md);">
+                                <h4 style="color: var(--accent-danger); font-size: 0.85rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-family: var(--font-heading);"><span data-i18n="url-donts-title"><i class="fa-solid fa-circle-xmark"></i> Things to Avoid</span></h4>
+                                <ul id="url-donts-list" style="font-size: 0.78rem; padding-left: 14px; color: var(--color-text-secondary); line-height: 1.4; margin-bottom: 0;">
+                                    <!-- Dynamic DONTs -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Technical indicators -->
+                        <h4 style="color: var(--color-text-primary); font-size: 0.9rem; margin-bottom: 6px; font-family: var(--font-heading); font-weight: 600;" data-i18n="url-tech-title">Technical Risk Indicators</h4>
+                        <div class="markdown-body" id="url-indicators-content" style="font-size: 0.82rem; line-height: 1.4;">
+                            <!-- Dynamic indicators & explanation -->
+                        </div>
+                    </div>
+
+                    <!-- Action Steps Footer -->
+                    <div class="checklist-header" style="margin-top: 15px;">
+                        <h3 data-i18n="url-recs-title"><i class="fa-solid fa-lightbulb"></i> Recommended Actions</h3>
+                    </div>
+                    <div class="checklist-items" id="url-actions-container" style="max-height: 180px; overflow-y: auto;">
+                        <!-- Dynamic checklists -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- View 3: AI Security Assistant Chatbot -->
+        <div id="view-chatbot" class="app-view dashboard-grid hidden">
+            <!-- Left Panel: Quick Queries -->
+            <section class="input-panel glass-panel">
+                <div class="panel-header">
+                    <h2 data-i18n="chat-guide-title"><i class="fa-solid fa-circle-question"></i> Quick Questions</h2>
+                    <p data-i18n="chat-guide-desc">Select any common cyber safety concern to get instant guidance</p>
+                </div>
+                
+                <div class="quick-queries-grid">
+                    <button class="quick-query-card" data-query="How can I spot if an email address is fake or spoofed?">
+                        <div class="query-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+                        <h4 data-i18n="query1-title">Spot Fake Emails</h4>
+                        <p data-i18n="query1-desc">Learn to detect sender name spoofing and character substitutions.</p>
+                    </button>
+                    <button class="quick-query-card" data-query="I clicked a suspicious link but didn't enter credentials. What should I do?">
+                        <div class="query-icon"><i class="fa-solid fa-link-slash"></i></div>
+                        <h4 data-i18n="query2-title">Clicked a Link</h4>
+                        <p data-i18n="query2-desc">Immediate actions to take for safety if you accidentally loaded a scam page.</p>
+                    </button>
+                    <button class="quick-query-card" data-query="What is Multi-Factor Authentication (MFA) and how does it protect me?">
+                        <div class="query-icon"><i class="fa-solid fa-key"></i></div>
+                        <h4 data-i18n="query3-title">Enable MFA</h4>
+                        <p data-i18n="query3-desc">Understand how 2FA works and why it stops credential harvesting.</p>
+                    </button>
+                    <button class="quick-query-card" data-query="How do scammers hijack credit card numbers using OTP scams?">
+                        <div class="query-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                        <h4 data-i18n="query4-title">OTP Scams</h4>
+                        <p data-i18n="query4-desc">How one-time passcode verification is exploited by banking scammers.</p>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Interactive Chat Console -->
+            <section class="output-panel glass-panel chat-panel" style="display: flex; flex-direction: column; min-height: 580px;">
+                <div class="panel-header chat-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 data-i18n="chat-title"><i class="fa-solid fa-comments"></i> Chat Assistant</h2>
+                        <p data-i18n="chat-desc">Ask CyberShield AI about security guidelines, threats, or protection tips</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="btn-clear-chat" title="Clear Chat History" style="margin-top: 2px;">
+                        <i class="fa-solid fa-trash-can"></i> <span data-i18n="btn-clear-chat-text">Clear Chat</span>
+                    </button>
+                </div>
+                
+                <!-- Messages Log Area -->
+                <div class="chat-messages-container" id="chat-messages-container" style="flex: 1; overflow-y: auto; padding-right: 6px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 14px; min-height: 350px; max-height: 400px;">
+                    <!-- Welcome Message -->
+                    <div class="chat-message message-assistant" style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div class="chat-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); flex-shrink: 0; font-size: 0.9rem;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="message-bubble" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 0 14px 14px 14px; max-width: 80%; font-size: 0.9rem; line-height: 1.5;">
+                            <p data-i18n="chat-welcome">Hello! I am <strong>CyberShield AI</strong>, your security assistant. I can answer questions about digital safety, phishing indicators, securing your online accounts, or what to do if you suspect a scam. How can I help you today?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Input area -->
+                <div class="chat-input-container" style="display: flex; gap: 10px; align-items: center; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <input type="text" id="input-chat-message" placeholder="Ask about phishing, MFA, secure passwords, or report steps..." style="flex: 1; margin-bottom: 0;" data-i18n-placeholder="placeholder-chat-msg">
+                    <button id="btn-send-chat" class="btn btn-accent btn-icon-only" title="Send Message" style="flex-shrink: 0; width: 44px; height: 44px; padding: 0;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- API Config Modal -->
+    <div class="modal-overlay hidden" id="api-modal">
+        <div class="modal-card glass-panel">
+            <div class="modal-header">
+                <h2 data-i18n="api-modal-title"><i class="fa-solid fa-gears"></i> Groq API Settings</h2>
+                <button class="btn-close-modal" id="btn-close-modal-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p data-i18n="api-modal-desc">This application processes image uploads and writes custom emails locally in your browser using Groq Llama 4 Scout vision model. A Groq console API key is required to perform analysis.</p>
+                
+                <div class="alert-box info">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <div>
+                        <strong data-i18n="api-modal-info-title">How to get an API Key?</strong>
+                        <p data-i18n="api-modal-info-desc">Go to <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq Console</a>, sign in with your account, and click <strong>Create API Key</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="form-group modal-api-group">
+                    <label for="input-api-key" data-i18n="lbl-api-key">Groq API Key</label>
+                    <div class="api-input-wrapper">
+                        <input type="password" id="input-api-key" placeholder="gsk_..." data-i18n-placeholder="placeholder-api-key">
+                        <button class="btn btn-secondary btn-icon-only" id="btn-toggle-key-visibility" type="button">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="api-help-text" data-i18n="api-modal-help">Your API key is stored safely on your machine in `localStorage`. It is never uploaded to any server.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-cancel-api" data-i18n="btn-cancel">Cancel</button>
+                <button class="btn btn-accent" id="btn-save-api" data-i18n="btn-save-api">Save API Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
